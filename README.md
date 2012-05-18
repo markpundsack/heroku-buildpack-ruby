@@ -47,7 +47,7 @@ Example Usage:
     $ ls config/environment.rb
     config/environment.rb
 
-    $ heroku create --stack cedar --buildpack http://github.com/markpundsack/heroku-buildpack-ruby.git
+    $ heroku create --stack cedar --buildpack http://github.com/heroku/heroku-buildpack-ruby.git
 
     $ git push heroku master
     ...
