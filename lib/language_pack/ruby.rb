@@ -58,6 +58,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       create_database_yml
       install_binaries
       run_assets_precompile_rake_task
+      run_db_migrate_rake_task
     end
   end
 
@@ -563,6 +564,18 @@ params = CGI.parse(uri.query || "")
       time = Benchmark.realtime { pipe("env PATH=$PATH:bin bundle exec rake assets:precompile 2>&1") }
       if $?.success?
         puts "Asset precompilation completed (#{"%.2f" % time}s)"
+      end
+    end
+  end
+
+  def run_db_migrate_rake_task
+    if rake_task_defined?("db:migrate")
+      require 'benchmark'
+
+      topic "Running: rake db:migrate"
+      time = Benchmark.realtime { pipe("env PATH=$PATH:bin bundle exec rake db:migrate 2>&1") }
+      if $?.success?
+        puts "Database migration completed (#{"%.2f" % time}s)"
       end
     end
   end
