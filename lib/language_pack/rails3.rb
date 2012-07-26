@@ -65,34 +65,6 @@ private
     end
   end
 
-  # runs the tasks for Rails migrations
-  def run_migration_rake_task
-    log("db_migrate") do
-      if not ENV["DATABASE_URL"]
-        puts "DATABASE_URL not found - either not using SQL database or user_env_compile isn't set"
-        puts "Skipping database migration"
-      else
-        if rake_task_defined?("db:migrate")
-          topic("Preparing app for Rails database migration")
-          ENV["RAILS_GROUPS"] ||= "assets"
-          ENV["RAILS_ENV"]    ||= "production"
-
-          puts "Running: rake db:migrate"
-          rake_output = ""
-          rake_output << run("env PATH=$PATH:bin bundle exec rake db:migrate 2>&1")
-          puts rake_output
-
-          if $?.success?
-            log "db_migrate", :status => "success"
-          else
-            log "db_migrate", :status => "failure"
-            puts "Migrating database failed, aborting compiling"
-          end
-        end
-      end
-    end
-  end
-
   # setup the database url as an environment variable
   def setup_database_url_env
     ENV["DATABASE_URL"] ||= begin
