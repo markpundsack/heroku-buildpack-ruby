@@ -1,3 +1,21 @@
+## v35 (9/19/2012)
+
+Features:
+
+* Upgrade to Bundler 1.2.1
+* Display bundle clean output
+* More resilent to rubygems.org API outages
+
+Bugfixes:
+
+* `bundle clean` works again
+
+## v34 (8/30/2012)
+
+Features:
+
+* Upgrade to Bundler 1.2.0
+
 ## v33 (8/9/2012)
 
 Features:
