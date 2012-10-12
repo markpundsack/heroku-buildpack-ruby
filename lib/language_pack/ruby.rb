@@ -380,7 +380,7 @@ ERROR
       version = run("env RUBYOPT=\"#{syck_hack}\" bundle version").strip
       topic("Installing dependencies using #{version}")
 
-      cache_load "vendor/bundle"
+      load_bundler_cache
 
       bundler_output = ""
       Dir.mktmpdir("libyaml-") do |tmpdir|
@@ -574,7 +574,7 @@ params = CGI.parse(uri.query || "")
       end
     end
   end
-  
+
   def run_db_migrate_rake_task
     if not ENV["DATABASE_URL"]
       puts "DATABASE_URL not found - either not using SQL database or user_env_compile isn't set"
@@ -594,5 +594,22 @@ params = CGI.parse(uri.query || "")
         end
       end
     end
+
+  def load_bundler_cache
+    full_ruby_version  = run(%q(ruby -v)).chomp
+    ruby_version_cache = "vendor/ruby_version"
+    cache_load ruby_version_cache
+    bundle_cache_loaded = cache_load "vendor/bundle"
+
+    if bundle_cache_loaded && !(File.exists?(ruby_version_cache) && full_ruby_version == File.read(ruby_version_cache).chomp)
+      puts "Ruby version change detected. Clearing bundler cache."
+      cache_clear "vendor/bundle"
+    end
+
+    FileUtils.mkdir_p("vendor")
+    File.open("vendor/ruby_version", 'w') do |file|
+      file.puts full_ruby_version
+    end
+    cache_store "vendor/ruby_version"
   end
 end
