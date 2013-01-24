@@ -1,3 +1,46 @@
+## v47
+
+Features:
+
+* Display ruby version change when busting the cache
+
+## v46 (1/10/2012)
+
+Features:
+
+* Upgrade Bundler to 1.3.0.pre.5
+* bundler binstubs now go in vendor/bundle/bin
+
+## v45 (12/14/2012)
+
+Features:
+
+* Stop setting env vars in bin/release now that login-shell is released
+* Enable Invoke Dynamic on JRuby by default
+* GEM_PATH is now updated on each push
+
+## v44 (12/14/2012)
+
+Faulty Release
+
+## v43 (12/13/2012)
+
+Features:
+
+* Upgrade Bundler to 1.3.0.pre.2
+
+## v42 (11/26/2012)
+
+Features:
+
+* Upgrade Bundler to 1.2.2 to fix Ruby 2.0.0/YAML issues
+
+## v41 (11/1/2012)
+
+Features:
+
+* Enable ruby 2.0.0 support for testing
+
 ## v40 (10/14/2012)
 
 Features:
