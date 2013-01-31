@@ -1,10 +1,29 @@
-## v47
+## v50
 
 Features:
 
+* Restore ruby deploys back to normal
+
+## v49 (1/30/2013)
+
+Features:
+
+* Re-enable ruby deploys for apps just using the heroku cache
 * Display ruby version change when busting the cache
 
-## v46 (1/10/2012)
+## v48 (1/30/2013)
+
+Features:
+
+* Update deploy error message copy to link to status incident.
+
+## v47 (1/30/2013)
+
+Features:
+
+* Disable ruby deploys due to rubygems.org compromise
+
+## v46 (1/10/2013)
 
 Features:
 
