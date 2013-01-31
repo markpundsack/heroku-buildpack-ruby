@@ -1,7 +1,7 @@
 Heroku buildpack: Ruby
 ======================
 
-This is a [Heroku buildpack](http://devcenter.heroku.com/articles/buildpacks) for Ruby, Rack, and Rails apps. It uses [Bundler](http://gembundler.com) for dependency management.
+This is a [Heroku buildpack](http://devcenter.heroku.com/articles/buildpacks) for Ruby, Rack, and Rails apps. It uses [Bundler](http://gembundler.com) for dependency management. This fork specifically runs `rake db:migrate` as part of the build process and aborts the deploy if migration fails.
 
 Usage
 -----
@@ -13,7 +13,7 @@ Example Usage:
     $ ls
     Gemfile Gemfile.lock
 
-    $ heroku create --stack cedar --buildpack https://github.com/heroku/heroku-buildpack-ruby.git
+    $ heroku create --stack cedar --buildpack https://github.com/markpundsack/heroku-buildpack-ruby.git
 
     $ git push heroku master
     ...
@@ -47,7 +47,7 @@ Example Usage:
     $ ls config/environment.rb
     config/environment.rb
 
-    $ heroku create --stack cedar --buildpack https://github.com/heroku/heroku-buildpack-ruby.git
+    $ heroku create --stack cedar --buildpack https://github.com/markpundsack/heroku-buildpack-ruby.git
 
     $ git push heroku master
     ...
@@ -81,7 +81,7 @@ Example Usage:
     $ ls config/application.rb
     config/application.rb
 
-    $ heroku create --stack cedar --buildpack https://github.com/heroku/heroku-buildpack-ruby.git
+    $ heroku create --stack cedar --buildpack https://github.com/markpundsack/heroku-buildpack-ruby.git
 
     $ git push heroku master
     -----> Heroku receiving push
@@ -145,6 +145,7 @@ Ruby (Gemfile and Gemfile.lock is detected)
 * installs binaries
   * installs node if the gem execjs is detected
 * runs `rake assets:precompile` if the rake task is detected
+* runs `rake db:migrate` if the rake task is detected
 
 Rack (config.ru is detected)
 
