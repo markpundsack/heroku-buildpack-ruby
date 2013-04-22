@@ -9,14 +9,14 @@ class LanguagePack::Ruby < LanguagePack::Base
   include LanguagePack::BundlerLockfile
   extend LanguagePack::BundlerLockfile
 
-  BUILDPACK_VERSION   = "v52"
+  BUILDPACK_VERSION   = "v61"
   LIBYAML_VERSION     = "0.1.4"
   LIBYAML_PATH        = "libyaml-#{LIBYAML_VERSION}"
-  BUNDLER_VERSION     = "1.3.0.pre.5"
+  BUNDLER_VERSION     = "1.3.2"
   BUNDLER_GEM_PATH    = "bundler-#{BUNDLER_VERSION}"
   NODE_VERSION        = "0.4.7"
   NODE_JS_BINARY_PATH = "node-#{NODE_VERSION}"
-  JVM_BASE_URL        = "http://heroku-jvm-langpack-java.s3.amazonaws.com"
+  JVM_BASE_URL        = "http://heroku-jdk.s3.amazonaws.com"
   JVM_VERSION         = "openjdk7-latest"
 
   # detects if this is a valid Ruby app
@@ -56,7 +56,11 @@ class LanguagePack::Ruby < LanguagePack::Base
       "GEM_PATH" => slug_vendor_base,
     }
 
-    ruby_version_jruby? ? vars.merge("JAVA_OPTS" => default_java_opts, "JRUBY_OPTS" => default_jruby_opts) : vars
+    ruby_version_jruby? ? vars.merge({
+      "JAVA_OPTS" => default_java_opts,
+      "JRUBY_OPTS" => default_jruby_opts,
+      "JAVA_TOOL_OPTIONS" => default_java_tool_options
+    }) : vars
   end
 
   def default_process_types
@@ -172,6 +176,12 @@ private
     "-Xcompile.invokedynamic=true"
   end
 
+  # default JAVA_TOOL_OPTIONS
+  # return [String] string of JAVA_TOOL_OPTIONS
+  def default_java_tool_options
+    "-Djava.rmi.server.useCodebaseOnly=true"
+  end
+
   # list the available valid ruby versions
   # @note the value is memoized
   # @return [Array] list of Strings of the ruby versions available
@@ -208,6 +218,7 @@ private
     if ruby_version_jruby?
       set_env_default "JAVA_OPTS", default_java_opts
       set_env_default "JRUBY_OPTS", default_jruby_opts
+      set_env_default "JAVA_TOOL_OPTIONS", default_java_tool_options
     end
   end
 
@@ -391,7 +402,7 @@ ERROR
         cache_load ".bundle"
       end
 
-      version = run("env RUBYOPT=\"#{syck_hack}\" bundle version").strip
+      version = run_stdout("bundle version").strip
       topic("Installing dependencies using #{version}")
 
       load_bundler_cache
@@ -405,9 +416,11 @@ ERROR
         yaml_include   = File.expand_path("#{libyaml_dir}/include")
         yaml_lib       = File.expand_path("#{libyaml_dir}/lib")
         pwd            = run("pwd").chomp
+        bundler_path   = "#{pwd}/#{slug_vendor_base}/gems/#{BUNDLER_GEM_PATH}/lib"
         # we need to set BUNDLE_CONFIG and BUNDLE_GEMFILE for
         # codon since it uses bundler.
         env_vars       = "env BUNDLE_GEMFILE=#{pwd}/Gemfile BUNDLE_CONFIG=#{pwd}/.bundle/config CPATH=#{yaml_include}:$CPATH CPPATH=#{yaml_include}:$CPPATH LIBRARY_PATH=#{yaml_lib}:$LIBRARY_PATH RUBYOPT=\"#{syck_hack}\""
+        env_vars      += " BUNDLER_LIB_PATH=#{bundler_path}" if ruby_version == "ruby-1.8.7"
         puts "Running: #{bundle_command}"
         bundler_output << pipe("#{env_vars} #{bundle_command} --no-clean 2>&1")
 
@@ -416,7 +429,7 @@ ERROR
       if $?.success?
         log "bundle", :status => "success"
         puts "Cleaning up the bundler cache."
-        pipe "bundle clean"
+        pipe "bundle clean 2> /dev/null"
         cache_store ".bundle"
         cache_store "vendor/bundle"
 
@@ -450,7 +463,7 @@ ERROR
   # @return [String] require string if needed or else an empty string
   def syck_hack
     syck_hack_file = File.expand_path(File.join(File.dirname(__FILE__), "../../vendor/syck_hack"))
-    ruby_version   = run('ruby -e "puts RUBY_VERSION"').chomp
+    ruby_version   = run_stdout('ruby -e "puts RUBY_VERSION"').chomp
     # < 1.9.3 includes syck, so we need to use the syck hack
     if Gem::Version.new(ruby_version) < Gem::Version.new("1.9.3")
       "-r#{syck_hack_file}"
@@ -623,10 +636,16 @@ params = CGI.parse(uri.query || "")
   def load_bundler_cache
     cache_load "vendor"
 
-    full_ruby_version       = run(%q(ruby -v)).chomp
+    full_ruby_version       = run_stdout(%q(ruby -v)).chomp
+    rubygems_version        = run_stdout(%q(gem -v)).chomp
     heroku_metadata         = "vendor/heroku"
+    old_rubygems_version    = nil
     ruby_version_cache      = "#{heroku_metadata}/ruby_version"
-    buildpack_version_cache = "vendor/heroku/buildpack_version"
+    buildpack_version_cache = "#{heroku_metadata}/buildpack_version"
+    bundler_version_cache   = "#{heroku_metadata}/bundler_version"
+    rubygems_version_cache  = "#{heroku_metadata}/rubygems_version"
+
+    old_rubygems_version = File.read(rubygems_version_cache).chomp if File.exists?(rubygems_version_cache)
 
     # fix bug from v37 deploy
     if File.exists?("vendor/ruby_version")
@@ -645,12 +664,32 @@ params = CGI.parse(uri.query || "")
       purge_bundler_cache
     end
 
+    # fix git gemspec bug from Bundler 1.3.0+ upgrade
+    if File.exists?(bundler_cache) && !File.exists?(bundler_version_cache) && !run("find vendor/bundle/*/*/bundler/gems/*/ -name *.gemspec").include?("No such file or directory")
+      puts "Old bundler cache detected. Clearing bundler cache."
+      purge_bundler_cache
+    end
+
+    # fix for https://github.com/heroku/heroku-buildpack-ruby/issues/86
+    if (!File.exists?(rubygems_version_cache) ||
+          (old_rubygems_version == "2.0.0" && old_rubygems_version != rubygems_version)) &&
+        File.exists?(ruby_version_cache) && File.read(ruby_version_cache).chomp.include?("ruby 2.0.0p0")
+      puts "Updating to rubygems #{rubygems_version}. Clearing bundler cache."
+      purge_bundler_cache
+    end
+
     FileUtils.mkdir_p(heroku_metadata)
     File.open(ruby_version_cache, 'w') do |file|
       file.puts full_ruby_version
     end
     File.open(buildpack_version_cache, 'w') do |file|
       file.puts BUILDPACK_VERSION
+    end
+    File.open(bundler_version_cache, 'w') do |file|
+      file.puts BUNDLER_VERSION
+    end
+    File.open(rubygems_version_cache, 'w') do |file|
+      file.puts rubygems_version
     end
     cache_store heroku_metadata
   end
