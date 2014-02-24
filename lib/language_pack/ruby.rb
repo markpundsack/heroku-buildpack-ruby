@@ -705,14 +705,14 @@ params = CGI.parse(uri.query || "")
   end
 
   def run_db_migrate_rake_task
-    if not ENV["DATABASE_URL"]
+    if not env("DATABASE_URL")
       puts "DATABASE_URL not found - either not using SQL database or user_env_compile isn't set"
       puts "Skipping database migration"
     else
       if rake_task_defined?("db:migrate")
         require 'benchmark'
         topic("Preparing app for Rails database migration")
-        ENV["RAILS_ENV"]    ||= "production"
+        env("RAILS_ENV")    ||= "production"
 
         topic "Running: rake db:migrate"
         time = Benchmark.realtime { pipe("env PATH=$PATH:bin bundle exec rake db:migrate 2>&1") }
